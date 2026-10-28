@@ -1,0 +1,110 @@
+# SOC-Lite Rules Configuration & Thresholds
+
+whitelist_service_task:
+  vendor_paths:
+    - "googleupdate.exe"
+    - "msedgeupdate.exe"
+    - "\\appdata\\local\\microsoft\\onedrive"
+    - "\\appdata\\local\\microsoft\\teams"
+    - "\\appdata\\local\\zoom"
+  parent_processes:
+    - "googleupdate.exe"
+    - "msedgeupdate.exe"
+  trusted_signers:
+    - "Google LLC"
+    - "Microsoft Corporation"
+    - "Zoom Video Communications, Inc."
+
+SOC-001:
+  enabled: true
+  threshold: 5
+  window_seconds: 60
+  cooldown_seconds: 300
+  allow_ips: []
+
+SOC-002:
+  enabled: true
+  prior_failures_threshold: 5
+  window_seconds: 300
+  cooldown_seconds: 300
+
+SOC-003:
+  enabled: true
+  cooldown_seconds: 60
+  known_admins: ["Administrator", "admin", "SYSTEM"]
+
+SOC-004:
+  enabled: true
+  cooldown_seconds: 60
+
+SOC-005:
+  enabled: true
+  cooldown_seconds: 60
+
+SOC-006:
+  enabled: true
+  cooldown_seconds: 60
+
+SOC-007:
+  enabled: true
+  cooldown_seconds: 60
+
+SOC-008:
+  enabled: true
+  cooldown_seconds: 60
+
+SOC-009:
+  enabled: true
+  cooldown_seconds: 60
+
+SOC-010:
+  enabled: true
+  cooldown_seconds: 60
+  allow_processes:
+    - "MsMpEng.exe"
+    - "csrss.exe"
+    - "wininit.exe"
+    - "svchost.exe"
+
+SOC-011:
+  enabled: true
+  cooldown_seconds: 300
+
+SOC-012:
+  enabled: true
+  cooldown_seconds: 60
+
+SOC-013:
+  enabled: true
+  cooldown_seconds: 60
+
+SOC-014:
+  enabled: true
+  window_seconds: 600
+  cooldown_seconds: 300
+
+SOC-015:
+  enabled: true
+  cooldown_seconds: 60
+
+SOC-016:
+  enabled: true
+  cooldown_seconds: 60
+
+SOC-017:
+  enabled: true
+  cooldown_seconds: 60
+
+SOC-018:
+  enabled: true
+  cooldown_seconds: 60
+
+SOC-019:
+  enabled: true
+  threshold: 50
+  window_seconds: 60
+  cooldown_seconds: 300
+
+SOC-020:
+  enabled: true
+  cooldown_seconds: 60

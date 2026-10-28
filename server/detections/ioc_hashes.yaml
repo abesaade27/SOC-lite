@@ -1,0 +1,14 @@
+# Local IOC Hash Database for SOC-Lite
+
+malicious_sha256:
+  - "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  - "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f"
+  - "cc320b224d14b4344421b8f0490b4ad4775d720c0dd0ccf6b986b6a22f98101a"
+
+# Known tool IMPHASH signatures.
+# If a binary has one of these IMPHASHes but a different image name (e.g. svchost.exe),
+# or matches a known malicious tool, flag it as a masquerading / renamed tool.
+known_imphash_tools:
+  "0c45d813f4b5a5160000000000000000": "mimikatz.exe"
+  "a1b2c3d4e5f60718293a4b5c6d7e8f90": "rubeus.exe"
+  "94b59ff8e7b32c6b4bf0f4e1329a1b88": "procdump.exe"

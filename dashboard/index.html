@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOC-Lite // Windows Log Detection Engine</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <!-- Pinned Chart.js with local vendor fallback -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    if (!window.Chart) {
+      document.write('<script src="/static/vendor/chart.umd.min.js"><\/script>');
+    }
+  </script>
+</head>
+<body>
+  <!-- Header / Navigation Bar -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo-radar"></div>
+      <span class="brand-title">SOC-LITE</span>
+      <span class="brand-sub">Windows SIEM & Detection</span>
+    </div>
+
+    <div class="controls-bar">
+      <div class="control-group">
+        <label for="hostSelect">HOST</label>
+        <select id="hostSelect" aria-label="Host filter">
+          <option value="">ALL HOSTS</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="rangeSelect">RANGE</label>
+        <select id="rangeSelect" aria-label="Time range">
+          <option value="15">15 MIN</option>
+          <option value="60" selected>1 HOUR</option>
+          <option value="360">6 HOURS</option>
+          <option value="1440">24 HOURS</option>
+        </select>
+      </div>
+
+      <div class="metric-badge">
+        <span class="metric-label">INGEST RATE</span>
+        <span id="rateValue" class="metric-val">0.0 /s</span>
+      </div>
+
+      <div class="btn-group">
+        <button id="pauseBtn" class="btn btn-secondary" title="Pause live event feed updates">PAUSE FEED</button>
+        <button id="audioToggleBtn" class="btn btn-secondary" title="Toggle audio alert notification">AUDIO: OFF</button>
+      </div>
+
+      <div id="connectionBadge" class="status-badge badge-offline">
+        <span class="status-dot"></span>
+        <span id="statusText">CONNECTING</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="dashboard-body">
+    <!-- KPI Row -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-title">TOTAL EVENTS</span>
+        <span id="kpiTotalEvents" class="kpi-value">0</span>
+        <span class="kpi-sub">in selected range</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-title">CURRENT RATE</span>
+        <span id="kpiRate" class="kpi-value">0.0</span>
+        <span class="kpi-sub">events / second</span>
+      </div>
+      <div class="kpi-card alert-kpi">
+        <span class="kpi-title">OPEN ALERTS</span>
+        <span id="kpiOpenAlerts" class="kpi-value">0</span>
+        <span class="kpi-sub">requiring triage</span>
+      </div>
+      <div class="kpi-card critical-kpi">
+        <span class="kpi-title">CRITICAL ALERTS</span>
+        <span id="kpiCriticalAlerts" class="kpi-value">0</span>
+        <span class="kpi-sub">immediate response</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-title">FAILED LOGONS</span>
+        <span id="kpiFailedLogons" class="kpi-value">0</span>
+        <span class="kpi-sub">Event 4625 count</span>
+      </div>
+    </section>
+
+    <!-- Visualizations Grid -->
+    <section class="charts-grid">
+      <div class="chart-panel">
+        <div class="panel-header">
+          <h3>EVENT VELOCITY (EVENTS / MINUTE)</h3>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="timelineChart"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-panel">
+        <div class="panel-header">
+          <h3>TOP EVENT IDS</h3>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="eventIdsChart"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-panel">
+        <div class="panel-header">
+          <h3>FAILED LOGONS BY SOURCE IP</h3>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="failedLogonsChart"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-panel">
+        <div class="panel-header">
+          <h3>ALERTS BY SEVERITY</h3>
+        </div>
+        <div class="chart-wrapper doughnut-wrapper">
+          <canvas id="severityChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Priority Alerts Panel -->
+    <section class="panel alerts-panel">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <h2>SECURITY ALERTS</h2>
+          <span id="alertsCountBadge" class="count-pill">0</span>
+        </div>
+        <div class="panel-filters">
+          <select id="alertSeverityFilter">
+            <option value="">ALL SEVERITIES</option>
+            <option value="critical">CRITICAL</option>
+            <option value="high">HIGH</option>
+            <option value="medium">MEDIUM</option>
+            <option value="low">LOW</option>
+          </select>
+          <select id="alertStatusFilter">
+            <option value="">ALL STATUSES</option>
+            <option value="new" selected>NEW ONLY</option>
+            <option value="ack">ACKNOWLEDGED</option>
+            <option value="closed">CLOSED</option>
+            <option value="false_positive">FALSE POSITIVE</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table id="alertsTable" class="soc-table">
+          <thead>
+            <tr>
+              <th>TIME (UTC)</th>
+              <th>SEVERITY</th>
+              <th>RULE</th>
+              <th>MITRE TECHNIQUE</th>
+              <th>HOST</th>
+              <th>ENTITY</th>
+              <th>STATUS</th>
+            </tr>
+          </thead>
+          <tbody id="alertsTableBody">
+            <tr>
+              <td colspan="7" class="empty-cell">No alerts recorded yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Live Event Stream Feed -->
+    <section class="panel events-panel">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <h2>LIVE EVENT FEED</h2>
+          <span class="live-indicator">LIVE (200 BUFFER)</span>
+        </div>
+        <div class="panel-filters">
+          <input type="text" id="eventSearchInput" placeholder="Search summary, cmdline, IP, user..." class="search-input">
+          <select id="eventCategoryFilter">
+            <option value="">ALL CATEGORIES</option>
+            <option value="auth">AUTH</option>
+            <option value="process">PROCESS</option>
+            <option value="account">ACCOUNT</option>
+            <option value="service">SERVICE</option>
+            <option value="powershell">POWERSHELL</option>
+            <option value="policy">POLICY</option>
+            <option value="network">NETWORK</option>
+            <option value="defender">DEFENDER</option>
+            <option value="other">OTHER</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table id="eventsTable" class="soc-table">
+          <thead>
+            <tr>
+              <th>TIME (UTC)</th>
+              <th>HOST</th>
+              <th>CHANNEL</th>
+              <th>EVENT ID</th>
+              <th>ACTION</th>
+              <th>USER</th>
+              <th>SRC IP</th>
+              <th>PROCESS / COMMAND</th>
+            </tr>
+          </thead>
+          <tbody id="eventsTableBody">
+            <tr>
+              <td colspan="8" class="empty-cell">Waiting for incoming events...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Side Drawer for Alert Inspection and Triage -->
+  <aside id="alertDrawer" class="drawer">
+    <div class="drawer-header">
+      <h3 id="drawerAlertTitle">Alert Details</h3>
+      <button id="closeAlertDrawer" class="close-btn">&times;</button>
+    </div>
+    <div class="drawer-content">
+      <div class="drawer-section">
+        <span class="label">RULE / ID:</span>
+        <div id="drawerRuleName" class="val val-highlight"></div>
+      </div>
+      <div class="drawer-section">
+        <span class="label">SEVERITY / STATUS:</span>
+        <div class="row-badges">
+          <span id="drawerSeverityBadge" class="sev-pill"></span>
+          <span id="drawerStatusBadge" class="status-pill"></span>
+        </div>
+      </div>
+      <div class="drawer-section">
+        <span class="label">MITRE ATT&CK:</span>
+        <div id="drawerMitre" class="val"></div>
+      </div>
+      <div class="drawer-section">
+        <span class="label">ENTITY & HOST:</span>
+        <div id="drawerEntityHost" class="val"></div>
+      </div>
+      <div class="drawer-section">
+        <span class="label">EVIDENCE DESCRIPTION:</span>
+        <div id="drawerDescription" class="val val-box"></div>
+      </div>
+      <div class="drawer-section">
+        <span class="label">SUPPORTING EVIDENCE EVENTS:</span>
+        <div id="drawerSupportingEvents" class="supporting-events-list">
+          <em>Loading supporting events...</em>
+        </div>
+      </div>
+      <div class="drawer-section">
+        <span class="label">ANALYST NOTE:</span>
+        <textarea id="drawerAnalystNote" placeholder="Enter investigation notes..."></textarea>
+      </div>
+      <div class="drawer-actions">
+        <button id="btnAckAlert" class="btn btn-warning">ACKNOWLEDGE</button>
+        <button id="btnCloseAlert" class="btn btn-success">CLOSE (RESOLVED)</button>
+        <button id="btnFpAlert" class="btn btn-secondary">FALSE POSITIVE</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Side Drawer for Event Raw JSON Inspection -->
+  <aside id="eventDrawer" class="drawer">
+    <div class="drawer-header">
+      <h3>Event Inspection</h3>
+      <button id="closeEventDrawer" class="close-btn">&times;</button>
+    </div>
+    <div class="drawer-content">
+      <div class="drawer-section">
+        <span class="label">EVENT SUMMARY:</span>
+        <div id="drawerEventSummary" class="val val-highlight"></div>
+      </div>
+      <div class="drawer-section">
+        <span class="label">NORMALIZED JSON & RAW METADATA:</span>
+        <pre id="drawerEventJson" class="json-viewer"></pre>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Footer Information -->
+  <footer class="soc-footer">
+    <div class="footer-left">
+      <span>SOC-Lite v1.0.0</span>
+      <span class="separator">|</span>
+      <span>SQLite WAL Storage</span>
+      <span class="separator">|</span>
+      <span id="footerDbSize">DB Size: 0 MB</span>
+      <span class="separator">|</span>
+      <span>Retention: 14 Days</span>
+    </div>
+    <div class="footer-right">
+      <span id="footerLastIngest">Last Ingest: None</span>
+    </div>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

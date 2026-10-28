@@ -1,0 +1,25 @@
+# Environments & secrets
+.env
+config.yaml
+*.db
+*.db-wal
+*.db-shm
+
+# Agent state & spools
+spool/
+bookmarks.json
+*.evtx
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
